@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-beta/css/bootstrap.min.css" type="text/css" media="all">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.5.0/css/bootstrap-datepicker.css" rel="stylesheet">
+
+</head>
+<body>
+<br>
+<br>
+
+<div class="container">
+    <div class="row">
+        <div class="col col-sm-1 col-md-1 col-lg-2"></div>
+        <div class="col col-sm-10 col-md-10 col-lg-8">
+            <div>
+                <h1>Publication histogram with Highcharts</h1>
+                <br>
+                <form id="search-form">
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" name="searchField" placeholder="Enter keyword" required="true"
+                                   oninvalid="this.setCustomValidity('Please enter a keyword')"
+                                   oninput="setCustomValidity('')">
+                        </div>
+                    </div>
+                    <label>Year range:</label>
+                    <div class="form-group row">
+                        <div class="col-sm-2">
+                            <input class="date-own form-control" name="startYear"  id="startYear" placeholder="From" type="text">
+                        </div>
+                        <div class="col-sm-2">
+                            <input class="date-own form-control" name="endYear" id="endYear" placeholder="To" type="text">
+                        </div>
+                    </div>
+                    <button type="submit" id="search-btn" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+        <div class="col col-sm-1 col-md-1 col-lg-2"></div>
+    </div>
+    <div id="container"></div>
+
+</div>
+
+
+
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.5.0/js/bootstrap-datepicker.js"></script>
+
+<script type="text/javascript">
+
+    $(function() {
+        $('.date-own').datepicker({
+            minViewMode: 2,
+            format: 'yyyy',
+            closeOnDateSelect: true
+        });
+
+        $("form").submit(function(e){
+            e.preventDefault();
+            var formValues = $(this).serializeArray();
+            var data;
+            var grouped_data;
+            var query;
+            var startYear = formValues[1].value;
+            var endYear = formValues[2].value;
+            if(!_.isEmpty(startYear) && !_.isEmpty(endYear) && endYear > startYear ){
+                query = formValues[0].value+'+PUB_YEAR:['+startYear+'+TO+'+endYear+']';
+            } else if(_.isEmpty(startYear) && _.isEmpty(endYear)) {
+                query = formValues[0].value
+            } else{
+                return alert('please select valid year range')
+            }
+
+            var url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query='+query+'&sort=CITED desc&format=json&pageSize=500';
+            $.ajax({
+                url: url,
+                type: "GET",
+                dataType: 'json',
+                async: false,
+                success: function(response){
+                   var results = response.resultList.result;
+                    var counts = _.countBy(results,'pubYear');
+                    grouped_data = _.groupBy(results,'pubYear');
+                    data = _.map(counts, function(value, key){
+                        return {
+                            name: key,
+                            data: value
+                        };
+                    });
+
+                }
+            });
+            Highcharts.chart('container', {
+                chart: {
+                    type: 'column'
+                },
+                title: {
+                    text: 'Publications per year'
+                },
+                subtitle: {
+                    text: 'Source: Europe PMC'
+                },
+                xAxis: {
+                    categories: _.pluck(data,'name'),
+                },
+                yAxis: {
+                    min: 0,
+                    allowDecimals:false,
+                    title: {
+                        text: 'Number of Publications'
+                    }
+                },
+                tooltip: {
+                    formatter: function() {
+                        var formatData = _.max(grouped_data[this.x],'citedByCount');
+                        var link = "http://europepmc.org/abstract/MED/"+formatData.id;
+                        console.log(link)
+                        var text = '<span>Most cited paper in year '+this.x+':</span><table><tr><td>ID: <a href="'+link+'" target="_blank">'+formatData.id+'</a></td></tr>' +
+                        '<tr><td>Title: '+formatData.title+'</td></tr>' +
+                        '<tr><td>Cited: '+formatData.citedByCount+' times</td></tr>' +
+                        '</table>'
+                        return text;
+                    },
+                    useHTML: true,
+                    style: {
+                        pointerEvents: 'auto'
+                    }
+                },
+                plotOptions: {
+                    column: {
+                        pointPadding: 0.2,
+                        borderWidth: 0
+                    }
+                },
+                series: [{
+                    name: 'Year',
+                    data: _.pluck(data,'data')
+
+                }],
+                stackLabels: {
+                    enabled: true,
+                    style: {
+                        fontWeight: 'bold',
+                        color:'gray'
+                    }
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

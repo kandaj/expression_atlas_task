@@ -1,0 +1,1 @@
+# Publication histogram with Highcharts
