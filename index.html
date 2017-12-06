@@ -63,26 +63,27 @@
         });
 
         $("form").submit(function(e){
-            console.log(e)
             e.preventDefault();
             $('#errorMessage').empty();
             var formValues = $(this).serializeArray();
             var data;
             var grouped_data;
             var query;
+            var pageSize = 500;
             var startYear = formValues[1].value;
             var endYear = formValues[2].value;
+            var searchTerm = formValues[0].value;
             if(!_.isEmpty(startYear) && !_.isEmpty(endYear) && endYear > startYear ){
-                query = formValues[0].value+'+PUB_YEAR:['+startYear+'+TO+'+endYear+']';
+                query = searchTerm+'+PUB_YEAR:['+startYear+'+TO+'+endYear+']';
             } else if(_.isEmpty(startYear) && _.isEmpty(endYear)) {
-                query = formValues[0].value
+                query = searchTerm;
             } else{
                 $('#container').empty();
                 $('#errorMessage').append('<div class="alert alert-danger">select a valid year range</div>');
                 return;
             }
 
-            var url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query='+query+'&sort=CITED desc&format=json&pageSize=500';
+            var url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query='+query+'&sort=CITED desc&format=json&pageSize='+pageSize;
             $.ajax({
                 url: url,
                 type: "GET",
@@ -94,7 +95,7 @@
                     grouped_data = _.groupBy(results,'pubYear');
                     data = _.map(counts, function(value, key){
                         return {
-                            name: key,
+                            year: key,
                             data: value
                         };
                     });
@@ -112,7 +113,7 @@
                     text: 'Source: Europe PMC'
                 },
                 xAxis: {
-                    categories: _.pluck(data,'name'),
+                    categories: _.pluck(data,'year'),
                 },
                 yAxis: {
                     min: 0,
@@ -126,7 +127,7 @@
                         var formatData = _.max(grouped_data[this.x],'citedByCount');
                         var link = "http://europepmc.org/abstract/MED/"+formatData.id;
                         console.log(link)
-                        var text = '<span>Most cited paper in year '+this.x+':</span><table><tr><td>ID: <a href="'+link+'" target="_blank">'+formatData.id+'</a></td></tr>' +
+                        var text = '<span>Most cited paper for search term "'+searchTerm+'" in year '+this.x+':</span><table><tr><td>ID: <a href="'+link+'" target="_blank">'+formatData.id+'</a></td></tr>' +
                         '<tr><td>Title: '+formatData.title+'</td></tr>' +
                         '<tr><td>Cited: '+formatData.citedByCount+' times</td></tr>' +
                         '</table>'
@@ -140,7 +141,17 @@
                 plotOptions: {
                     column: {
                         pointPadding: 0.2,
-                        borderWidth: 0
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            style: {
+                                fontWeight: 'lighter',
+                                color:'gray'
+                            },
+                            formatter: function(){
+                                return Highcharts.numberFormat(this.y,0);
+                            },
+                        }
                     }
                 },
                 series: [{
