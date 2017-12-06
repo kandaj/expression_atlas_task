@@ -24,6 +24,7 @@
                                    oninput="setCustomValidity('')">
                         </div>
                     </div>
+                    <div id="errorMessage"></div>
                     <label>Year range:</label>
                     <div class="form-group row">
                         <div class="col-sm-2">
@@ -62,6 +63,7 @@
 
         $("form").submit(function(e){
             e.preventDefault();
+            $('#errorMessage').empty();
             var formValues = $(this).serializeArray();
             var data;
             var grouped_data;
@@ -73,7 +75,9 @@
             } else if(_.isEmpty(startYear) && _.isEmpty(endYear)) {
                 query = formValues[0].value
             } else{
-                return alert('please select valid year range')
+                $('#container').empty();
+                $('#errorMessage').append('<div class="alert alert-danger">select a valid year range</div>');
+                return;
             }
 
             var url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query='+query+'&sort=CITED desc&format=json&pageSize=500';
