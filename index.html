@@ -41,7 +41,9 @@
         </div>
         <div class="col col-sm-1 col-md-1 col-lg-2"></div>
     </div>
+    <br />
     <div id="container"></div>
+    <div id="loadingDiv"><img src="http://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif" alt="Loading" style="margin-left: 300px;" /></div>
 
 </div>
 
@@ -61,7 +63,7 @@
             format: 'yyyy',
             closeOnDateSelect: true
         });
-
+        $('#loadingDiv').hide();
         $("form").submit(function(e){
             e.preventDefault();
             $('#errorMessage').empty();
@@ -89,8 +91,14 @@
                 type: "GET",
                 dataType: 'json',
                 async: false,
+                beforeSend: function() {
+                    $('#loadingDiv').show();
+                },
+                complete: function(){
+                    $('#loadingDiv').hide();
+                },
                 success: function(response){
-                   var results = response.resultList.result;
+                    var results = response.resultList.result;
                     var counts = _.countBy(results,'pubYear');
                     grouped_data = _.groupBy(results,'pubYear');
                     data = _.map(counts, function(value, key){
@@ -102,6 +110,7 @@
 
                 }
             });
+            $('#container').empty();
             Highcharts.chart('container', {
                 chart: {
                     type: 'column'
